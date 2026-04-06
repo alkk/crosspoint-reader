@@ -135,8 +135,26 @@ void EpubReaderActivity::loop() {
     }
   }
 
-  // Enter reader menu activity.
+  // Long press CONFIRM (1s+) toggles between Portrait and Landscape CCW
+  if (!automaticPageTurnActive && mappedInput.isPressed(MappedInputManager::Button::Confirm) &&
+      mappedInput.getHeldTime() >= ReaderUtils::ROTATE_MS && !rotateTriggered) {
+    rotateTriggered = true;
+    if (SETTINGS.orientation == CrossPointSettings::ORIENTATION::PORTRAIT) {
+      applyOrientation(CrossPointSettings::ORIENTATION::LANDSCAPE_CCW);
+    } else {
+      applyOrientation(CrossPointSettings::ORIENTATION::PORTRAIT);
+    }
+    requestUpdate();
+    return;
+  }
+
+  // Enter reader menu activity (short press only).
   if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
+    const bool wasLongPress = rotateTriggered;
+    rotateTriggered = false;
+    if (wasLongPress) {
+      return;
+    }
     const int currentPage = section ? section->currentPage + 1 : 0;
     const int totalPages = section ? section->pageCount : 0;
     float bookProgress = 0.0f;

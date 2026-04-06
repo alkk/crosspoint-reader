@@ -332,6 +332,12 @@ Constraint: Physical button positions are fixed on hardware, but their logical f
 
 **Rule**: Always use `MappedInputManager::Button::*` enums, never raw `HalGPIO::BTN_*` indices (except in ButtonRemapActivity).
 
+**Reader Long-Press Behaviors**:
+- `Back` held >=1s (`ReaderUtils::GO_HOME_MS`): navigate to file browser (EPUB, XTC, TXT)
+- `Confirm` held >=1s (`ReaderUtils::ROTATE_MS`): toggle orientation between Portrait and Landscape CCW (EPUB only)
+- `PageForward`/`PageBack` held: chapter/page skip when `SETTINGS.longPressChapterSkip` enabled (EPUB, XTC)
+- Short press on release is gated by `getHeldTime() < threshold` to avoid double-firing after a long-press
+
 ### UITheme (The GUI Macro)
 * Rule: All UI rendering must go through the GUI macro (UITheme). 
 * Do not hardcode fonts, colors, or positioning. This ensures orientation-aware layout consistency.

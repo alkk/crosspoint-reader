@@ -27,6 +27,7 @@ class EpubReaderActivity final : public Activity {
   bool pendingScreenshot = false;
   bool skipNextButtonCheck = false;  // Skip button processing for one frame after subactivity exit
   bool automaticPageTurnActive = false;
+  bool rotateTriggered = false;  // One-shot guard for long-press Confirm rotation
 
   // Footnote support
   std::vector<FootnoteEntry> currentPageFootnotes;
