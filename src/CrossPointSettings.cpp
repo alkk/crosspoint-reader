@@ -258,6 +258,16 @@ float CrossPointSettings::getReaderLineCompression() const {
         case WIDE:
           return 1.0f;
       }
+    case LEXICA:
+      switch (lineSpacing) {
+        case TIGHT:
+          return 0.95f;
+        case NORMAL:
+        default:
+          return 1.0f;
+        case WIDE:
+          return 1.1f;
+      }
   }
 }
 
@@ -331,6 +341,18 @@ int CrossPointSettings::getReaderFontId() const {
           return OPENDYSLEXIC_12_FONT_ID;
         case EXTRA_LARGE:
           return OPENDYSLEXIC_14_FONT_ID;
+      }
+    case LEXICA:
+      switch (fontSize) {
+        case SMALL:
+          return LEXICA_12_FONT_ID;
+        case MEDIUM:
+        default:
+          return LEXICA_14_FONT_ID;
+        case LARGE:
+          return LEXICA_16_FONT_ID;
+        case EXTRA_LARGE:
+          return LEXICA_18_FONT_ID;
       }
   }
 }
