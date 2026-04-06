@@ -109,6 +109,31 @@ EpdFont opendyslexic14ItalicFont(&opendyslexic_14_italic);
 EpdFont opendyslexic14BoldItalicFont(&opendyslexic_14_bolditalic);
 EpdFontFamily opendyslexic14FontFamily(&opendyslexic14RegularFont, &opendyslexic14BoldFont, &opendyslexic14ItalicFont,
                                        &opendyslexic14BoldItalicFont);
+
+EpdFont lexica12RegularFont(&lexica_12_regular);
+EpdFont lexica12BoldFont(&lexica_12_bold);
+EpdFont lexica12ItalicFont(&lexica_12_italic);
+EpdFont lexica12BoldItalicFont(&lexica_12_bolditalic);
+EpdFontFamily lexica12FontFamily(&lexica12RegularFont, &lexica12BoldFont, &lexica12ItalicFont,
+                                 &lexica12BoldItalicFont);
+EpdFont lexica14RegularFont(&lexica_14_regular);
+EpdFont lexica14BoldFont(&lexica_14_bold);
+EpdFont lexica14ItalicFont(&lexica_14_italic);
+EpdFont lexica14BoldItalicFont(&lexica_14_bolditalic);
+EpdFontFamily lexica14FontFamily(&lexica14RegularFont, &lexica14BoldFont, &lexica14ItalicFont,
+                                 &lexica14BoldItalicFont);
+EpdFont lexica16RegularFont(&lexica_16_regular);
+EpdFont lexica16BoldFont(&lexica_16_bold);
+EpdFont lexica16ItalicFont(&lexica_16_italic);
+EpdFont lexica16BoldItalicFont(&lexica_16_bolditalic);
+EpdFontFamily lexica16FontFamily(&lexica16RegularFont, &lexica16BoldFont, &lexica16ItalicFont,
+                                 &lexica16BoldItalicFont);
+EpdFont lexica18RegularFont(&lexica_18_regular);
+EpdFont lexica18BoldFont(&lexica_18_bold);
+EpdFont lexica18ItalicFont(&lexica_18_italic);
+EpdFont lexica18BoldItalicFont(&lexica_18_bolditalic);
+EpdFontFamily lexica18FontFamily(&lexica18RegularFont, &lexica18BoldFont, &lexica18ItalicFont,
+                                 &lexica18BoldItalicFont);
 #endif  // OMIT_FONTS
 
 EpdFont smallFont(&notosans_8_regular);
@@ -213,10 +238,16 @@ void setupDisplayAndFonts() {
   renderer.insertFont(NOTOSANS_14_FONT_ID, notosans14FontFamily);
   renderer.insertFont(NOTOSANS_16_FONT_ID, notosans16FontFamily);
   renderer.insertFont(NOTOSANS_18_FONT_ID, notosans18FontFamily);
+
   renderer.insertFont(OPENDYSLEXIC_8_FONT_ID, opendyslexic8FontFamily);
   renderer.insertFont(OPENDYSLEXIC_10_FONT_ID, opendyslexic10FontFamily);
   renderer.insertFont(OPENDYSLEXIC_12_FONT_ID, opendyslexic12FontFamily);
   renderer.insertFont(OPENDYSLEXIC_14_FONT_ID, opendyslexic14FontFamily);
+
+  renderer.insertFont(LEXICA_12_FONT_ID, lexica12FontFamily);
+  renderer.insertFont(LEXICA_14_FONT_ID, lexica14FontFamily);
+  renderer.insertFont(LEXICA_16_FONT_ID, lexica16FontFamily);
+  renderer.insertFont(LEXICA_18_FONT_ID, lexica18FontFamily);
 #endif  // OMIT_FONTS
   renderer.insertFont(UI_10_FONT_ID, ui10FontFamily);
   renderer.insertFont(UI_12_FONT_ID, ui12FontFamily);
