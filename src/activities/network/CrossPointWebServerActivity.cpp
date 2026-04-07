@@ -12,6 +12,7 @@
 #include "MappedInputManager.h"
 #include "NetworkModeSelectionActivity.h"
 #include "WifiSelectionActivity.h"
+#include "activities/network/BleAppConnectActivity.h"
 #include "activities/network/CalibreConnectActivity.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
@@ -105,6 +106,8 @@ void CrossPointWebServerActivity::onNetworkModeSelected(const NetworkMode mode) 
     modeName = "Connect to Calibre";
   } else if (mode == NetworkMode::CREATE_HOTSPOT) {
     modeName = "Create Hotspot";
+  } else if (mode == NetworkMode::CONNECT_APP) {
+    modeName = "Connect via App";
   }
   LOG_DBG("WEBACT", "Network mode selected: %s", modeName);
 
@@ -114,6 +117,23 @@ void CrossPointWebServerActivity::onNetworkModeSelected(const NetworkMode mode) 
   if (mode == NetworkMode::CONNECT_CALIBRE) {
     startActivityForResult(
         std::make_unique<CalibreConnectActivity>(renderer, mappedInput), [this](const ActivityResult& result) {
+          state = WebServerActivityState::MODE_SELECTION;
+
+          startActivityForResult(std::make_unique<NetworkModeSelectionActivity>(renderer, mappedInput),
+                                 [this](const ActivityResult& result) {
+                                   if (result.isCancelled) {
+                                     onGoHome();
+                                   } else {
+                                     onNetworkModeSelected(std::get<NetworkModeResult>(result.data).mode);
+                                   }
+                                 });
+        });
+    return;
+  }
+
+  if (mode == NetworkMode::CONNECT_APP) {
+    startActivityForResult(
+        std::make_unique<BleAppConnectActivity>(renderer, mappedInput), [this](const ActivityResult& result) {
           state = WebServerActivityState::MODE_SELECTION;
 
           startActivityForResult(std::make_unique<NetworkModeSelectionActivity>(renderer, mappedInput),

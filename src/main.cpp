@@ -134,26 +134,22 @@ EpdFont lexica12RegularFont(&lexica_12_regular);
 EpdFont lexica12BoldFont(&lexica_12_bold);
 EpdFont lexica12ItalicFont(&lexica_12_italic);
 EpdFont lexica12BoldItalicFont(&lexica_12_bolditalic);
-EpdFontFamily lexica12FontFamily(&lexica12RegularFont, &lexica12BoldFont, &lexica12ItalicFont,
-                                 &lexica12BoldItalicFont);
+EpdFontFamily lexica12FontFamily(&lexica12RegularFont, &lexica12BoldFont, &lexica12ItalicFont, &lexica12BoldItalicFont);
 EpdFont lexica14RegularFont(&lexica_14_regular);
 EpdFont lexica14BoldFont(&lexica_14_bold);
 EpdFont lexica14ItalicFont(&lexica_14_italic);
 EpdFont lexica14BoldItalicFont(&lexica_14_bolditalic);
-EpdFontFamily lexica14FontFamily(&lexica14RegularFont, &lexica14BoldFont, &lexica14ItalicFont,
-                                 &lexica14BoldItalicFont);
+EpdFontFamily lexica14FontFamily(&lexica14RegularFont, &lexica14BoldFont, &lexica14ItalicFont, &lexica14BoldItalicFont);
 EpdFont lexica16RegularFont(&lexica_16_regular);
 EpdFont lexica16BoldFont(&lexica_16_bold);
 EpdFont lexica16ItalicFont(&lexica_16_italic);
 EpdFont lexica16BoldItalicFont(&lexica_16_bolditalic);
-EpdFontFamily lexica16FontFamily(&lexica16RegularFont, &lexica16BoldFont, &lexica16ItalicFont,
-                                 &lexica16BoldItalicFont);
+EpdFontFamily lexica16FontFamily(&lexica16RegularFont, &lexica16BoldFont, &lexica16ItalicFont, &lexica16BoldItalicFont);
 EpdFont lexica18RegularFont(&lexica_18_regular);
 EpdFont lexica18BoldFont(&lexica_18_bold);
 EpdFont lexica18ItalicFont(&lexica_18_italic);
 EpdFont lexica18BoldItalicFont(&lexica_18_bolditalic);
-EpdFontFamily lexica18FontFamily(&lexica18RegularFont, &lexica18BoldFont, &lexica18ItalicFont,
-                                 &lexica18BoldItalicFont);
+EpdFontFamily lexica18FontFamily(&lexica18RegularFont, &lexica18BoldFont, &lexica18ItalicFont, &lexica18BoldItalicFont);
 #endif  // OMIT_FONTS
 
 EpdFont smallFont(&notosans_8_regular);

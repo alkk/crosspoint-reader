@@ -12,6 +12,7 @@
 
 #include "RecentBooksStore.h"
 #include "components/UITheme.h"
+#include "components/icons/bluetooth.h"
 #include "components/icons/book.h"
 #include "components/icons/book24.h"
 #include "components/icons/cover.h"
@@ -118,6 +119,8 @@ const uint8_t* iconForName(UIIcon icon, int size) {
         return WifiIcon;
       case UIIcon::Hotspot:
         return HotspotIcon;
+      case UIIcon::Bluetooth:
+        return BluetoothIcon;
       default:
         return nullptr;
     }
