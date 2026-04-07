@@ -115,6 +115,9 @@ bool JsonSettingsIO::saveSettings(const CrossPointSettings& s, const char* path)
     }
   }
 
+  // Font size migration marker — presence indicates EXTRA_SMALL-aware settings.
+  doc["fontSizeV2"] = 1;
+
   // Front button remap — managed by RemapFrontButtons sub-activity, not in SettingsList.
   doc["frontButtonBack"] = s.frontButtonBack;
   doc["frontButtonConfirm"] = s.frontButtonConfirm;
@@ -186,6 +189,16 @@ bool JsonSettingsIO::loadSettings(CrossPointSettings& s, const char* json, bool*
       }
       s.*(info.valuePtr) = v;
     }
+  }
+
+  // Font size migration: EXTRA_SMALL was inserted at enum position 0, shifting all existing values up by 1.
+  // If fontSizeV2 is absent, this is a pre-EXTRA_SMALL settings file — bump fontSize to preserve the user's choice.
+  // Only bump when fontSize was actually stored in JSON; if the key was absent the struct default is already correct.
+  if (doc["fontSizeV2"].isNull() && !doc["fontSize"].isNull()) {
+    if (s.fontSize < CrossPointSettings::EXTRA_LARGE) {
+      s.fontSize++;
+    }
+    if (needsResave) *needsResave = true;
   }
 
   // Front button remap — managed by RemapFrontButtons sub-activity, not in SettingsList.

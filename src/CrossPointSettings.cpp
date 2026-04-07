@@ -101,7 +101,14 @@ bool CrossPointSettings::loadFromFile() {
 
   // Fall back to binary migration
   if (Storage.exists(SETTINGS_FILE_BIN)) {
-    if (loadFromBinaryFile()) {
+    uint8_t binarySettingsCount = 0;
+    if (loadFromBinaryFile(binarySettingsCount)) {
+      // Binary files predate EXTRA_SMALL: bump fontSize to preserve the user's choice
+      // (same migration as JsonSettingsIO applies for pre-fontSizeV2 JSON files).
+      // fontSize is the 9th field (index 8) in the binary layout; only bump if it
+      // was actually present in the file, otherwise the default MEDIUM is correct.
+      static constexpr uint8_t FONT_SIZE_FIELD_INDEX = 9;
+      if (binarySettingsCount >= FONT_SIZE_FIELD_INDEX && fontSize < EXTRA_LARGE) fontSize++;
       if (saveToFile()) {
         Storage.rename(SETTINGS_FILE_BIN, SETTINGS_FILE_BAK);
         LOG_DBG("CPS", "Migrated settings.bin to settings.json");
@@ -116,7 +123,7 @@ bool CrossPointSettings::loadFromFile() {
   return false;
 }
 
-bool CrossPointSettings::loadFromBinaryFile() {
+bool CrossPointSettings::loadFromBinaryFile(uint8_t& outSettingsCount) {
   FsFile inputFile;
   if (!Storage.openFileForRead("CPS", SETTINGS_FILE_BIN, inputFile)) {
     return false;
@@ -220,8 +227,9 @@ bool CrossPointSettings::loadFromBinaryFile() {
     applyLegacyFrontButtonLayout(*this);
   }
 
+  outSettingsCount = fileSettingsCount;
   inputFile.close();
-  LOG_DBG("CPS", "Settings loaded from binary file");
+  LOG_DBG("CPS", "Settings loaded from binary file (%u fields)", fileSettingsCount);
   return true;
 }
 
@@ -248,6 +256,7 @@ float CrossPointSettings::getReaderLineCompression() const {
         case WIDE:
           return 1.0f;
       }
+#ifndef OMIT_OPENDYSLEXIC
     case OPENDYSLEXIC:
       switch (lineSpacing) {
         case TIGHT:
@@ -258,6 +267,7 @@ float CrossPointSettings::getReaderLineCompression() const {
         case WIDE:
           return 1.0f;
       }
+#endif
     case LEXICA:
       switch (lineSpacing) {
         case TIGHT:
@@ -308,6 +318,8 @@ int CrossPointSettings::getReaderFontId() const {
     case BOOKERLY:
     default:
       switch (fontSize) {
+        case EXTRA_SMALL:
+          return BOOKERLY_10_FONT_ID;
         case SMALL:
           return BOOKERLY_12_FONT_ID;
         case MEDIUM:
@@ -320,6 +332,8 @@ int CrossPointSettings::getReaderFontId() const {
       }
     case NOTOSANS:
       switch (fontSize) {
+        case EXTRA_SMALL:
+          return NOTOSANS_10_FONT_ID;
         case SMALL:
           return NOTOSANS_12_FONT_ID;
         case MEDIUM:
@@ -330,8 +344,11 @@ int CrossPointSettings::getReaderFontId() const {
         case EXTRA_LARGE:
           return NOTOSANS_18_FONT_ID;
       }
+#ifndef OMIT_OPENDYSLEXIC
     case OPENDYSLEXIC:
       switch (fontSize) {
+        case EXTRA_SMALL:
+          return OPENDYSLEXIC_8_FONT_ID;
         case SMALL:
           return OPENDYSLEXIC_8_FONT_ID;
         case MEDIUM:
@@ -342,8 +359,11 @@ int CrossPointSettings::getReaderFontId() const {
         case EXTRA_LARGE:
           return OPENDYSLEXIC_14_FONT_ID;
       }
+#endif
     case LEXICA:
       switch (fontSize) {
+        case EXTRA_SMALL:
+          return LEXICA_10_FONT_ID;
         case SMALL:
           return LEXICA_12_FONT_ID;
         case MEDIUM:
