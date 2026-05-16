@@ -26,6 +26,8 @@
 #include "QrDisplayActivity.h"
 #include "ReaderUtils.h"
 #include "RecentBooksStore.h"
+#include "SdCardFontSystem.h"
+#include "activities/settings/FontSelectionActivity.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
 #include "util/ScreenshotUtil.h"
@@ -175,14 +177,32 @@ void EpubReaderActivity::loop() {
     const int bookProgressPercent = clampPercent(static_cast<int>(bookProgress + 0.5f));
     startActivityForResult(std::make_unique<EpubReaderMenuActivity>(
                                renderer, mappedInput, epub->getTitle(), currentPage, totalPages, bookProgressPercent,
-                               SETTINGS.orientation, !currentPageFootnotes.empty()),
+                               SETTINGS.orientation, SETTINGS.fontSize, !currentPageFootnotes.empty()),
                            [this](const ActivityResult& result) {
-                             // Always apply orientation change even if the menu was cancelled
+                             // Dispatch the confirmed action first so handlers see a still-valid
+                             // section (orientation/font-size apply below resets it).
                              const auto& menu = std::get<MenuResult>(result.data);
-                             applyOrientation(menu.orientation);
-                             toggleAutoPageTurn(menu.pageTurnOption);
                              if (!result.isCancelled) {
                                onReaderMenuConfirm(static_cast<EpubReaderMenuActivity::MenuAction>(menu.action));
+                             }
+                             // Always apply orientation/auto-turn/font-size even when the menu was
+                             // cancelled, since these are previewed inline on the menu rows.
+                             applyOrientation(menu.orientation);
+                             toggleAutoPageTurn(menu.pageTurnOption);
+                             if (menu.fontSize != SETTINGS.fontSize) {
+                               {
+                                 RenderLock lock(*this);
+                                 if (section) {
+                                   cachedSpineIndex = currentSpineIndex;
+                                   cachedChapterTotalPageCount = section->pageCount;
+                                   nextPageNumber = section->currentPage;
+                                 }
+                                 SETTINGS.fontSize = menu.fontSize;
+                                 sdFontSystem.ensureLoaded(renderer);
+                                 SETTINGS.saveToFile();
+                                 section.reset();
+                               }
+                               requestUpdate();
                              }
                            });
   }
@@ -352,6 +372,32 @@ void EpubReaderActivity::onReaderMenuConfirm(EpubReaderMenuActivity::MenuAction 
                                }
                                requestUpdate();
                              });
+      break;
+    }
+    case EpubReaderMenuActivity::MenuAction::SELECT_FONT_FAMILY: {
+      const uint8_t prevFontFamily = SETTINGS.fontFamily;
+      std::string prevSdName(SETTINGS.sdFontFamilyName);
+      startActivityForResult(
+          std::make_unique<FontSelectionActivity>(renderer, mappedInput, &sdFontSystem.registry()),
+          [this, prevFontFamily, prevSdName = std::move(prevSdName)](const ActivityResult&) {
+            if (SETTINGS.fontFamily == prevFontFamily && strcmp(SETTINGS.sdFontFamilyName, prevSdName.c_str()) == 0) {
+              return;
+            }
+            {
+              RenderLock lock(*this);
+              if (section) {
+                cachedSpineIndex = currentSpineIndex;
+                cachedChapterTotalPageCount = section->pageCount;
+                nextPageNumber = section->currentPage;
+              }
+              // ensureLoaded() may clear SETTINGS.sdFontFamilyName when the SD font
+              // is missing or fails to load, so persist after it runs.
+              sdFontSystem.ensureLoaded(renderer);
+              SETTINGS.saveToFile();
+              section.reset();
+            }
+            requestUpdate();
+          });
       break;
     }
     case EpubReaderMenuActivity::MenuAction::GO_TO_PERCENT: {
@@ -655,15 +701,17 @@ void EpubReaderActivity::render(RenderLock&& lock) {
       }
       pendingPageJump.reset();
     } else {
+      // Defer clamping until after the remap below: if the new pagination has
+      // fewer pages than the saved one, clamping first would lose the saved
+      // position (e.g., 150/200 -> clamp to 99 -> remap 99/200 = 49 instead of
+      // the intended 150/200 -> 75).
       section->currentPage = nextPageNumber;
       if (section->currentPage < 0) {
         section->currentPage = 0;
-      } else if (section->currentPage >= section->pageCount && section->pageCount > 0) {
-        LOG_DBG("ERS", "Clamping cached page %d to %d", section->currentPage, section->pageCount - 1);
-        section->currentPage = section->pageCount - 1;
       }
     }
 
+    const bool anchorNavigation = !pendingAnchor.empty();
     if (!pendingAnchor.empty()) {
       if (const auto page = section->getPageForAnchor(pendingAnchor)) {
         section->currentPage = *page;
@@ -676,13 +724,21 @@ void EpubReaderActivity::render(RenderLock&& lock) {
 
     // handles changes in reader settings and reset to approximate position based on cached progress
     if (cachedChapterTotalPageCount > 0) {
-      // only goes to relative position if spine index matches cached value
-      if (currentSpineIndex == cachedSpineIndex && section->pageCount != cachedChapterTotalPageCount) {
+      // Skip remap when an anchor was just resolved: the anchor target is the
+      // intended destination, and scaling it against a stale page count would
+      // scramble the landing page.
+      if (!anchorNavigation && currentSpineIndex == cachedSpineIndex &&
+          section->pageCount != cachedChapterTotalPageCount) {
         float progress = static_cast<float>(section->currentPage) / static_cast<float>(cachedChapterTotalPageCount);
         int newPage = static_cast<int>(progress * section->pageCount);
         section->currentPage = newPage;
       }
       cachedChapterTotalPageCount = 0;  // resets to 0 to prevent reading cached progress again
+    }
+
+    if (section->currentPage >= section->pageCount && section->pageCount > 0) {
+      LOG_DBG("ERS", "Clamping page %d to %d", section->currentPage, section->pageCount - 1);
+      section->currentPage = section->pageCount - 1;
     }
 
     if (pendingPercentJump && section->pageCount > 0) {
@@ -914,11 +970,27 @@ void EpubReaderActivity::renderStatusBar() const {
 void EpubReaderActivity::navigateToHref(const std::string& hrefStr, const bool savePosition) {
   if (!epub) return;
 
-  // Push current position onto saved stack
-  if (savePosition && section && footnoteDepth < MAX_FOOTNOTE_DEPTH) {
-    savedPositions[footnoteDepth] = {currentSpineIndex, section->currentPage};
+  // Push current position onto saved stack. Section may be null if the reader
+  // menu reset it (font-size/family/orientation change selected together with
+  // FOOTNOTES); fall back to nextPageNumber and the cached pre-reflow total,
+  // which those paths populate before resetting section. Saving the total lets
+  // restoreSavedPosition re-seed the reflow cache so the page index is remapped
+  // proportionally against the new pagination on return.
+  if (savePosition && footnoteDepth < MAX_FOOTNOTE_DEPTH) {
+    int returnPage;
+    int returnTotal;
+    if (section) {
+      returnPage = section->currentPage;
+      returnTotal = section->pageCount;
+    } else {
+      returnPage = nextPageNumber;
+      returnTotal =
+          (cachedChapterTotalPageCount > 0 && cachedSpineIndex == currentSpineIndex) ? cachedChapterTotalPageCount : 0;
+    }
+    savedPositions[footnoteDepth] = {currentSpineIndex, returnPage, returnTotal};
     footnoteDepth++;
-    LOG_DBG("ERS", "Saved position [%d]: spine %d, page %d", footnoteDepth, currentSpineIndex, section->currentPage);
+    LOG_DBG("ERS", "Saved position [%d]: spine %d, page %d/%d", footnoteDepth, currentSpineIndex, returnPage,
+            returnTotal);
   }
 
   // Extract fragment anchor (e.g. "#note1" or "chapter2.xhtml#note1")
@@ -959,12 +1031,20 @@ void EpubReaderActivity::restoreSavedPosition() {
   if (footnoteDepth <= 0) return;
   footnoteDepth--;
   const auto& pos = savedPositions[footnoteDepth];
-  LOG_DBG("ERS", "Restoring position [%d]: spine %d, page %d", footnoteDepth, pos.spineIndex, pos.pageNumber);
+  LOG_DBG("ERS", "Restoring position [%d]: spine %d, page %d/%d", footnoteDepth, pos.spineIndex, pos.pageNumber,
+          pos.totalPages);
 
   {
     RenderLock lock(*this);
     currentSpineIndex = pos.spineIndex;
     nextPageNumber = pos.pageNumber;
+    // Re-seed reflow cache so render() remaps the raw page index against the
+    // new pagination if a font/family/orientation change happened between
+    // save and restore.
+    if (pos.totalPages > 0) {
+      cachedSpineIndex = pos.spineIndex;
+      cachedChapterTotalPageCount = pos.totalPages;
+    }
     section.reset();
   }
   requestUpdate();

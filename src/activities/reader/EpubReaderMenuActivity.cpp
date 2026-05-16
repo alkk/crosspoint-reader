@@ -10,22 +10,25 @@
 EpubReaderMenuActivity::EpubReaderMenuActivity(GfxRenderer& renderer, MappedInputManager& mappedInput,
                                                const std::string& title, const int currentPage, const int totalPages,
                                                const int bookProgressPercent, const uint8_t currentOrientation,
-                                               const bool hasFootnotes)
+                                               const uint8_t currentFontSize, const bool hasFootnotes)
     : Activity("EpubReaderMenu", renderer, mappedInput),
       menuItems(buildMenuItems(hasFootnotes)),
       title(title),
       pendingOrientation(currentOrientation),
+      pendingFontSize(currentFontSize),
       currentPage(currentPage),
       totalPages(totalPages),
       bookProgressPercent(bookProgressPercent) {}
 
 std::vector<EpubReaderMenuActivity::MenuItem> EpubReaderMenuActivity::buildMenuItems(bool hasFootnotes) {
   std::vector<MenuItem> items;
-  items.reserve(10);
+  items.reserve(12);
   items.push_back({MenuAction::SELECT_CHAPTER, StrId::STR_SELECT_CHAPTER});
   if (hasFootnotes) {
     items.push_back({MenuAction::FOOTNOTES, StrId::STR_FOOTNOTES});
   }
+  items.push_back({MenuAction::CHANGE_FONT_SIZE, StrId::STR_FONT_SIZE});
+  items.push_back({MenuAction::SELECT_FONT_FAMILY, StrId::STR_FONT_FAMILY});
   items.push_back({MenuAction::ROTATE_SCREEN, StrId::STR_ORIENTATION});
   items.push_back({MenuAction::AUTO_PAGE_TURN, StrId::STR_AUTO_TURN_PAGES_PER_MIN});
   items.push_back({MenuAction::GO_TO_PERCENT, StrId::STR_GO_TO_PERCENT});
@@ -71,13 +74,21 @@ void EpubReaderMenuActivity::loop() {
       return;
     }
 
-    setResult(MenuResult{static_cast<int>(selectedAction), pendingOrientation, selectedPageTurnOption});
+    if (selectedAction == MenuAction::CHANGE_FONT_SIZE) {
+      // Cycle font size preview locally; actual re-pagination happens on menu exit.
+      pendingFontSize = (pendingFontSize + 1) % fontSizeLabels.size();
+      requestUpdate();
+      return;
+    }
+
+    setResult(
+        MenuResult{static_cast<int>(selectedAction), pendingOrientation, selectedPageTurnOption, pendingFontSize});
     finish();
     return;
   } else if (mappedInput.wasReleased(MappedInputManager::Button::Back)) {
     ActivityResult result;
     result.isCancelled = true;
-    result.data = MenuResult{-1, pendingOrientation, selectedPageTurnOption};
+    result.data = MenuResult{-1, pendingOrientation, selectedPageTurnOption, pendingFontSize};
     setResult(std::move(result));
     finish();
     return;
@@ -144,6 +155,13 @@ void EpubReaderMenuActivity::render(RenderLock&&) {
     if (menuItems[i].action == MenuAction::AUTO_PAGE_TURN) {
       // Render current page turn value on the right edge of the content area.
       const auto value = pageTurnLabels[selectedPageTurnOption];
+      const auto width = renderer.getTextWidth(UI_10_FONT_ID, value);
+      renderer.drawText(UI_10_FONT_ID, contentX + contentWidth - 20 - width, displayY, value, !isSelected);
+    }
+
+    if (menuItems[i].action == MenuAction::CHANGE_FONT_SIZE) {
+      // Render current font size value on the right edge of the content area.
+      const char* value = I18N.get(fontSizeLabels[pendingFontSize]);
       const auto width = renderer.getTextWidth(UI_10_FONT_ID, value);
       renderer.drawText(UI_10_FONT_ID, contentX + contentWidth - 20 - width, displayY, value, !isSelected);
     }

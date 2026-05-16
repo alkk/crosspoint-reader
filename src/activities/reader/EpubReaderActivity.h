@@ -38,6 +38,11 @@ class EpubReaderActivity final : public Activity {
   struct SavedPosition {
     int spineIndex;
     int pageNumber;
+    // Total page count of the spine item at save time. When non-zero, restore
+    // re-seeds the reflow cache so the new section's pagination is remapped
+    // proportionally (font/family/orientation change while a footnote is open,
+    // or selected together with FOOTNOTES from the reader menu).
+    int totalPages;
   };
   static constexpr int MAX_FOOTNOTE_DEPTH = 3;
   SavedPosition savedPositions[MAX_FOOTNOTE_DEPTH] = {};
