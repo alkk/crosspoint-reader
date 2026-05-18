@@ -1,6 +1,20 @@
-# CrossPoint Reader
+# CrossPoint Reader (fork)
+
+> This is a personal fork of [crosspoint-reader/crosspoint-reader](https://github.com/crosspoint-reader/crosspoint-reader) with a small set of local changes layered on top of upstream. See [Fork changes](#fork-changes) below for the current delta.
 
 CrossPoint is open-source e-reader firmware - community-built, fully hackable, free forever. It's maintained by a growing community of developers and readers who believe your device should do what you want - not what a manufacturer decided for you.
+
+## Fork changes
+
+Changes in this fork relative to upstream `crosspoint-reader/crosspoint-reader@master`:
+
+- Default UI font switched to NotoSans.
+- Reader menu: added font size and font family controls.
+- Font selection: cursor lands on the currently-used font when entering `FontSelectionActivity`.
+- Reader: long-press Confirm toggles screen orientation (Portrait ↔ Landscape CCW).
+- Tooling: `scripts/debugging_monitor.py` invocations updated to `python3`.
+- Web file manager: rename and move folders.
+- Cache walk: watchdog reset during recursive walk; folder icon fix in modals.
 
 **Now running on:** ESP32C3-based Xteink [X4](https://www.xteink.com/products/xteink-x4) and [X3](https://www.xteink.com/products/xteink-x3).
 

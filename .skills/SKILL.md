@@ -3,6 +3,12 @@
 Project: Open-source e-reader firmware for Xteink X4 (ESP32-C3)
 Mission: Provide a lightweight, high-performance reading experience focused on EPUB rendering on constrained hardware.
 
+## Fork Maintenance
+
+This repository is a personal fork of `crosspoint-reader/crosspoint-reader`. README.md contains a **"Fork changes"** section listing the delta from upstream `master`.
+
+**Rule**: Whenever you add, change, or remove a fork-local feature, update the "Fork changes" section of README.md in the same commit. When an upstream merge lands a feature that was previously listed here, remove that entry from the README.
+
 ## AI Agent Identity and Cognitive Rules
 * Role: Senior Embedded Systems Engineer (ESP-IDF/Arduino-ESP32 specialized).
 * Primary Constraint: 380KB RAM is the hard ceiling. Stability is non-negotiable.
