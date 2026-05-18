@@ -218,6 +218,10 @@ class CrossPointSettings {
   uint8_t focusReadingEnabled = 0;
   // SD card font family name (empty = use built-in fontFamily)
   char sdFontFamilyName[32] = "";
+  // Previously-used font (for one-press toggle in FontSelectionActivity).
+  // Same encoding convention: empty previousSdFontFamilyName => use previousFontFamily built-in index.
+  uint8_t previousFontFamily = NOTOSERIF;
+  char previousSdFontFamilyName[32] = "";
   // Show hidden files/directories (starting with '.') in the file browser (0 = hidden, 1 = show)
   uint8_t showHiddenFiles = 0;
   // Image rendering mode in EPUB reader

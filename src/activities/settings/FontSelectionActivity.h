@@ -20,6 +20,9 @@ class FontSelectionActivity final : public Activity {
 
  private:
   void handleSelection();
+  // Returns the index in fonts_ for the given (builtin, sdName) pair, or -1 if not resolvable
+  // (e.g. previous SD font no longer present in the registry).
+  int resolveFontIndex(uint8_t builtinIndex, const char* sdName) const;
 
   struct FontEntry {
     std::string name;

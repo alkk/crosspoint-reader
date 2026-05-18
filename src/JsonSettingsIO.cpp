@@ -145,6 +145,11 @@ bool JsonSettingsIO::saveSettings(const CrossPointSettings& s, const char* path)
   if (s.sdFontFamilyName[0] != '\0') {
     doc["sdFontFamilyName"] = s.sdFontFamilyName;
   }
+  // Previous font — used by FontSelectionActivity for one-press toggle.
+  doc["previousFontFamily"] = s.previousFontFamily;
+  if (s.previousSdFontFamilyName[0] != '\0') {
+    doc["previousSdFontFamilyName"] = s.previousSdFontFamilyName;
+  }
 
   // Language -- managed by LanguageSelectActivity, not in SettingsList.
   // Stored as ISO code string ("EN", "DE", ...) for stability across enum reorders.
@@ -239,6 +244,13 @@ bool JsonSettingsIO::loadSettings(CrossPointSettings& s, const char* json, bool*
   const char* sfn = doc["sdFontFamilyName"] | "";
   strncpy(s.sdFontFamilyName, sfn, sizeof(s.sdFontFamilyName) - 1);
   s.sdFontFamilyName[sizeof(s.sdFontFamilyName) - 1] = '\0';
+
+  // Previous font — used by FontSelectionActivity for one-press toggle.
+  s.previousFontFamily =
+      clamp(doc["previousFontFamily"] | (uint8_t)s.previousFontFamily, CrossPointSettings::BUILTIN_FONT_COUNT, 0);
+  const char* prevSfn = doc["previousSdFontFamilyName"] | "";
+  strncpy(s.previousSdFontFamilyName, prevSfn, sizeof(s.previousSdFontFamilyName) - 1);
+  s.previousSdFontFamilyName[sizeof(s.previousSdFontFamilyName) - 1] = '\0';
 
   // Language -- stored as code string for stability across enum reorders.
   if (doc["language"].is<const char*>()) {

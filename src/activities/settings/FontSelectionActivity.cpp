@@ -30,21 +30,34 @@ void FontSelectionActivity::onEnter() {
     }
   }
 
-  // Find current selection
-  selectedIndex_ = 0;
-  if (SETTINGS.sdFontFamilyName[0] != '\0' && registry_) {
-    const auto& families = registry_->getFamilies();
-    for (int i = 0; i < static_cast<int>(families.size()); i++) {
-      if (families[i].name == SETTINGS.sdFontFamilyName) {
-        selectedIndex_ = CrossPointSettings::BUILTIN_FONT_COUNT + i;
-        break;
-      }
-    }
+  // Cursor lands on the previously-used font for one-press toggle.
+  // Falls back to current font when there's no valid different previous (first run, SD font removed, etc.).
+  const int currentIndex = resolveFontIndex(SETTINGS.fontFamily, SETTINGS.sdFontFamilyName);
+  const int previousIndex = resolveFontIndex(SETTINGS.previousFontFamily, SETTINGS.previousSdFontFamilyName);
+  if (previousIndex >= 0 && previousIndex != currentIndex) {
+    selectedIndex_ = previousIndex;
   } else {
-    selectedIndex_ = SETTINGS.fontFamily < CrossPointSettings::BUILTIN_FONT_COUNT ? SETTINGS.fontFamily : 0;
+    selectedIndex_ = currentIndex >= 0 ? currentIndex : 0;
   }
 
   requestUpdate();
+}
+
+int FontSelectionActivity::resolveFontIndex(uint8_t builtinIndex, const char* sdName) const {
+  if (sdName[0] != '\0') {
+    if (!registry_) return -1;
+    const auto& families = registry_->getFamilies();
+    for (int i = 0; i < static_cast<int>(families.size()); i++) {
+      if (families[i].name == sdName) {
+        return CrossPointSettings::BUILTIN_FONT_COUNT + i;
+      }
+    }
+    return -1;
+  }
+  if (builtinIndex < CrossPointSettings::BUILTIN_FONT_COUNT) {
+    return builtinIndex;
+  }
+  return -1;
 }
 
 void FontSelectionActivity::onExit() { Activity::onExit(); }
@@ -86,16 +99,43 @@ void FontSelectionActivity::loop() {
 
 void FontSelectionActivity::handleSelection() {
   const auto& font = fonts_[selectedIndex_];
+
+  // Determine the new (builtin, sdName) pair without mutating SETTINGS yet,
+  // so we can compare against the current values to decide whether to roll previous.
+  uint8_t newBuiltin = SETTINGS.fontFamily;
+  const char* newSdName = "";
   if (font.settingIndex < CrossPointSettings::BUILTIN_FONT_COUNT) {
-    SETTINGS.fontFamily = font.settingIndex;
-    SETTINGS.sdFontFamilyName[0] = '\0';
+    newBuiltin = font.settingIndex;
   } else if (registry_) {
-    int sdIdx = font.settingIndex - CrossPointSettings::BUILTIN_FONT_COUNT;
+    const int sdIdx = font.settingIndex - CrossPointSettings::BUILTIN_FONT_COUNT;
     const auto& families = registry_->getFamilies();
     if (sdIdx < static_cast<int>(families.size())) {
-      strncpy(SETTINGS.sdFontFamilyName, families[sdIdx].name.c_str(), sizeof(SETTINGS.sdFontFamilyName) - 1);
-      SETTINGS.sdFontFamilyName[sizeof(SETTINGS.sdFontFamilyName) - 1] = '\0';
+      newSdName = families[sdIdx].name.c_str();
+    } else {
+      finish();
+      return;
     }
+  } else {
+    finish();
+    return;
+  }
+
+  // Roll previous only when the selection actually changes — otherwise repeated confirms
+  // would clobber the toggle target.
+  const bool sdChanged = strcmp(newSdName, SETTINGS.sdFontFamilyName) != 0;
+  const bool builtinChanged = (newSdName[0] == '\0') && (SETTINGS.sdFontFamilyName[0] != '\0' || newBuiltin != SETTINGS.fontFamily);
+  if (sdChanged || builtinChanged) {
+    SETTINGS.previousFontFamily = SETTINGS.fontFamily;
+    strncpy(SETTINGS.previousSdFontFamilyName, SETTINGS.sdFontFamilyName, sizeof(SETTINGS.previousSdFontFamilyName) - 1);
+    SETTINGS.previousSdFontFamilyName[sizeof(SETTINGS.previousSdFontFamilyName) - 1] = '\0';
+  }
+
+  if (newSdName[0] == '\0') {
+    SETTINGS.fontFamily = newBuiltin;
+    SETTINGS.sdFontFamilyName[0] = '\0';
+  } else {
+    strncpy(SETTINGS.sdFontFamilyName, newSdName, sizeof(SETTINGS.sdFontFamilyName) - 1);
+    SETTINGS.sdFontFamilyName[sizeof(SETTINGS.sdFontFamilyName) - 1] = '\0';
   }
   finish();
 }
